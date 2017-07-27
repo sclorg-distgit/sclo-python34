@@ -21,35 +21,26 @@
 %{?scl:          %scl_package        python-mock}
 %{!?scl:         %global pkg_name    %{name}}
 
-%if 0%{?fedora} || 0%{?epel} > 6
-# keeping python3 subpackage as stdlib mock lives in a different namespace
-# Some people may have not fixed their imports
-%global with_python3 1
-%endif
-
-# Not yet in Fedora buildroot
-%{!?python3_pkgversion:%global python3_pkgversion 3}
-
 %global mod_name mock
 
 Name:           %{?sub_prefix}python-mock
-Version:        2.0.0
-Release:        4%{?dist}
+Version:        1.0.1
+Release:        10%{?dist}
 Summary:        A Python Mocking and Patching Library for Testing
 
 License:        BSD
 URL:            http://www.voidspace.org.uk/python/%{mod_name}/
 Source0:        http://pypi.python.org/packages/source/m/%{mod_name}/%{mod_name}-%{version}.tar.gz
+Source1:        LICENSE.txt
 
 BuildArch:      noarch
 BuildRequires:  %{?scl_prefix}python-devel
 BuildRequires:  %{?scl_prefix}python-setuptools
-BuildRequires:  %{?scl_prefix}python-funcsigs
-BuildRequires:  %{?scl_prefix}python-pbr
+# For tests
+%if 0%{?with_python3} 
+BuildRequires:  %{?scl_prefix}python-unittest2
+%endif
 
-Requires:    %{?scl_prefix}python-funcsigs
-Requires:    %{?scl_prefix}python-pbr
-Requires:    %{?scl_prefix}python-six >= 1.9.0
 Requires:    %{?scl_prefix}python
 
 %if 0%{?scl:1}
@@ -61,13 +52,6 @@ Provides: %{?scl_prefix}python2-%{mod_name} = %{version}-%{release}
 %endif
 %endif
 
-
-
-# For tests
-%if 0%{?rhel} <= 7
-BuildRequires:  %{?scl_prefix}python-unittest2
-%endif
-
 %description
 Mock is a Python module that provides a core mock class. It removes the need
 to create a host of stubs throughout your test suite. After performing an
@@ -77,51 +61,39 @@ needed attributes in the normal way.
 
 %prep
 %setup -q -n %{mod_name}-%{version}
+cp -p %{SOURCE1} .
 
 
 %build
 %{?scl:scl enable %{scl} - << \EOF}
 %{__python} setup.py build
+rm -rvf %{buildroot}/%{python_sitelib}/__pycache__
 %{?scl:EOF}
 
+%if 0%{?with_python3} 
 %check
 %{?scl:scl enable %{scl} - << \EOF}
 %{__python} setup.py test ||:
+rm -rvf %{buildroot}/%{python_sitelib}/__pycache__
 %{?scl:EOF}
+%endif
 
 %install
 %{?scl:scl enable %{scl} - << \EOF}
 %{__python} setup.py install -O1 --skip-build --root %{buildroot}
+rm -rvf %{buildroot}/%{python_sitelib}/__pycache__
 %{?scl:EOF}
-
-
+ 
 %files
 %{!?_licensedir:%global license %%doc}
 %license LICENSE.txt
-%doc docs/*
+%doc docs/* README.txt PKG-INFO
 %{python_sitelib}/*.egg-info
-%{python_sitelib}/%{mod_name}
-
+%{python_sitelib}/%{mod_name}.py*
 
 %changelog
-* Wed Jul 26 2017 Jaroslaw Polok <jaroslaw.polok@cern.ch>
+* Thu Jul 27 2017 Jaroslaw Polok <jaroslaw.polok@cern.ch>
 - SCLo build.
-
-* Sat Feb 11 2017 Fedora Release Engineering <releng@fedoraproject.org> - 2.0.0-4
-- Rebuilt for https://fedoraproject.org/wiki/Fedora_26_Mass_Rebuild
-
-* Fri Dec 09 2016 Charalampos Stratakis <cstratak@redhat.com> - 2.0.0-3
-- Rebuild for Python 3.6
-
-* Tue Jul 19 2016 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 2.0.0-2
-- https://fedoraproject.org/wiki/Changes/Automatic_Provides_for_Python_RPM_Packages
-
-* Tue Jun 14 2016 Praveen Kumar <kumarpraveen.nitdgp@gmail.com> - 2.0.0-1
-- Upstream 2.0.0 (RHBZ#1244145)
-
-* Fri Feb 26 2016 Haïkel Guémar <hguemar@fedoraproject.org> - 1.3.0-1
-- Upstream 1.3.0 (RHBZ#1244145)
-- Use epel macros rather than rhel
 
 * Thu Feb 04 2016 Fedora Release Engineering <releng@fedoraproject.org> - 1.0.1-10
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_24_Mass_Rebuild
